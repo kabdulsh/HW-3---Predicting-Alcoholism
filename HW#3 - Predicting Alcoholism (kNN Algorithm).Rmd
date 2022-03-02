@@ -1,0 +1,120 @@
+---
+title: 'HW#3: Predicting Alcoholism (kNN Algorithm)'
+author: "Khalid Abdulshafi"
+date: "2/13/2022"
+output: 
+  html_document:
+    highlight: tango
+    theme: united
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: false
+---
+
+# Work Flow
+
+- Step 1: Preparation
+- Step 2: Running kNN Algorithm
+- Step 3: Evaluating Model Performance
+- Step 4: Conclusion
+
+# Step 1: Preparation
+
+## Read and Explore Data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Import data
+data <- read.csv("spor.csv")
+```
+
+```{r}
+str(data)
+summary(data)
+```
+
+## Data Cleaning
+
+```{r}
+# Convert multiple variables to factors
+data[, c("school", "sex", "address", "famsize", "Pstatus", "activities", "romantic", "alc")] <- lapply(data[, c("school", "sex", "address", "famsize", "Pstatus", "activities", "romantic", "alc")], factor)
+```
+
+```{r}
+# Convert all categorical variables to numeric variables
+data[sapply(data, is.factor)] <- data.matrix(data[sapply(data, is.factor)])
+```
+
+```{r}
+# Note: k-NN classification is used when predicting a categorical outcome, whereas k-NN regression is used when predicting a continuous outcome.
+
+# Put consumption data in its own object
+y <- data["alc"]
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+# z-Score Standardization
+data[, c("age", "Medu", "Fedu", "studytime", "famrel", "freetime", "goout", "health", "absences", "grades")] <- scale(data[, c("age", "Medu", "Fedu", "studytime", "famrel", "freetime", "goout", "health", "absences", "grades")])
+```
+
+```{r}
+summary(data)
+```
+
+##  Split Data into Training set and Testing set
+
+```{r}
+# Set a seed for random number generator for consistent output
+set.seed(567)
+
+# Split the data into training and testing sets
+# Partition 70% of the data into the training set and the remaining 30% in the testing set.
+sample_size <- floor(0.70 * nrow(data))
+training_index <- sample(seq_len(nrow(data)), size = sample_size)
+
+# Create training and testing sets
+train <- data[training_index,]
+test <- data[-training_index,]
+
+# Split dependent variable into training and testing sets using the same partition as above.
+y_train <- y[training_index,]
+y_test <- y[-training_index,]
+```
+
+```{r}
+neighbors_k <- floor(sqrt(nrow(data)))
+```
+
+# Step 2: Running kNN Algorithm
+
+```{r}
+library(class)
+```
+
+```{r}
+knn_pred <- knn(train = train, test = test, cl = y_train, k = neighbors_k)
+```
+
+# Step 3: Evaluating Model Performance
+
+```{r}
+library(gmodels)
+library(caret)
+```
+
+```{r}
+CrossTable(x = y_test, y = knn_pred, prop.chisq=FALSE)
+confusionMatrix(as.factor(y_test), knn_pred)
+```
+
+# Step 4: Conclusion
+
+> Of the two models, kNN & logistic regression, I prefer using kNN because it has a higher accuracy (i.e. 87%) than logistic regression (i.e. 69%).

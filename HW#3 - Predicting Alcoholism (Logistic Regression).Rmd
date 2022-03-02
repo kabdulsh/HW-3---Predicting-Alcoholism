@@ -1,0 +1,120 @@
+---
+title: "HW#3 - Predicting Alcoholism (Logistic Regression)"
+author: "Khalid Abdulshafi"
+date: "2/13/2022"
+output: 
+  html_document:
+    highlight: tango
+    theme: united
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: false
+---
+
+# Work Flow
+
+- Step 1: Preparation
+- Step 2: Running Logistic Regression
+- Step 3: Making Predictions
+- Step 4: Evaluating Model Performance
+- Step 5: Conclusion
+
+# Step 1: Preparation
+
+## Read and Explore Data
+
+```{r}
+data <- read.csv("spor.csv")
+str(data)
+summary(data)
+```
+
+## Data Cleaning
+
+```{r}
+# Convert All Character Columns of Data Frame to Factor
+data <- as.data.frame(unclass(data), stringsAsFactors = TRUE)
+
+# Factor alc
+data$alc <- as.factor(data$alc)
+```
+
+##  Split Data into Training set and Testing set 
+
+```{r}
+# Set a seed for random number generator for consistent output
+set.seed(123)
+
+split <- sample(c(rep(0, 0.7 * nrow(data)), rep(1, 0.3 * nrow(data))))
+
+# Verify split data
+# 454 observations should be in the training data (i.e. 0), and 194 observations should be in the testing data (i.e. 1)
+table(split)
+
+# Create training data set
+train <- data[split == 0,]
+
+# Create testing data set
+test <- data[split == 1,]
+
+# Source: https://www.r-bloggers.com/2021/12/how-to-split-data-into-train-and-test-in-r/
+```
+
+# Step 2: Running Logistic Regression
+
+```{r}
+# Build a model with y-intercept only
+# To be used in stepwise regression
+FitStart <- glm(alc ~ 1, data = train, family = "binomial")
+```
+
+```{r}
+# Build a model with all variables
+FitAll <- glm(alc ~ ., data = train, family = "binomial")
+summary(FitAll)
+```
+
+```{r}
+# Build a model after removing nonsignificant variables
+FitAllMinusNonSig <- glm(alc ~ sex + Pstatus + studytime + famrel + goout + health + absences, data = train, family = "binomial")
+summary(FitAllMinusNonSig)
+```
+```{r}
+# I believe the best model is alc ~ sex + Pstatus + studytime + famrel + goout + health + absences because it scored a 528.29 on the AIC scale
+```
+
+```{r}
+# Let's see if stepwise regression finds a better model
+step(FitStart, direction = "both", scope = formula(FitAll))
+```
+
+```{r}
+# Stepwise regression found a better model, i.e. it scored a 527.92 on the AIC scale 
+
+# The best model is alc ~ goout + sex + famrel + studytime + health + absences + Pstatus + freetime
+
+bestModel <- glm(formula = alc ~ goout + sex + famrel + studytime + health + absences + Pstatus + freetime, family = "binomial", data = train)
+```
+
+# Step 3: Making Predictions
+
+```{r}
+library(gmodels)
+library(caret)
+```
+
+```{r}
+results <- ifelse(predict(bestModel, newdata = test, type = "response") > 0.60, 1 , 0)
+```
+
+# Step 4: Evaluating Model Performance
+
+```{r}
+CrossTable(x = test$alc, y = results, prop.chisq=FALSE)
+confusionMatrix(test$alc, as.factor(results))
+```
+
+# Step 5: Conclusion
+
+> Of the two models, kNN & logistic regression, I prefer using kNN because it has a higher accuracy (i.e. 87%) than logistic regression (i.e. 69%).
